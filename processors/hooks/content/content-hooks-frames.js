@@ -1,3 +1,14 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.LOAD_IMAGE_EVENT = exports.IMAGE_LOADED_EVENT = void 0;
+exports.getFontsData = getFontsData;
+exports.getWorkletsData = getWorkletsData;
+exports.loadDeferredImagesEnd = loadDeferredImagesEnd;
+exports.loadDeferredImagesResetZoomLevel = loadDeferredImagesResetZoomLevel;
+exports.loadDeferredImagesStart = loadDeferredImagesStart;
 /*
  * Copyright 2010-2022 Gildas Lormeau
  * contact : gildas.lormeau <at> gmail.com
@@ -35,114 +46,97 @@ const DISPATCH_SCROLL_START_EVENT = "single-file-dispatch-scroll-event-start";
 const DISPATCH_SCROLL_END_EVENT = "single-file-dispatch-scroll-event-end";
 const BLOCK_STORAGE_START_EVENT = "single-file-block-storage-start";
 const BLOCK_STORAGE_END_EVENT = "single-file-block-storage-end";
-const LOAD_IMAGE_EVENT = "single-file-load-image";
-const IMAGE_LOADED_EVENT = "single-file-image-loaded";
+const LOAD_IMAGE_EVENT = exports.LOAD_IMAGE_EVENT = "single-file-load-image";
+const IMAGE_LOADED_EVENT = exports.IMAGE_LOADED_EVENT = "single-file-image-loaded";
 const NEW_FONT_FACE_EVENT = "single-file-new-font-face";
 const DELETE_FONT_EVENT = "single-file-delete-font";
 const CLEAR_FONTS_EVENT = "single-file-clear-fonts";
 const NEW_WORKLET_EVENT = "single-file-new-worklet";
 const FONT_FACE_PROPERTY_NAME = "_singleFile_fontFaces";
 const WORKLET_PROPERTY_NAME = "_singleFile_worklets";
-
 const CustomEvent = globalThis.CustomEvent;
 const document = globalThis.document;
 const Document = globalThis.Document;
 const JSON = globalThis.JSON;
 const MutationObserver = globalThis.MutationObserver;
-
 let fontFaces, worklets;
 if (window[FONT_FACE_PROPERTY_NAME]) {
-	fontFaces = window[FONT_FACE_PROPERTY_NAME];
+  fontFaces = window[FONT_FACE_PROPERTY_NAME];
 } else {
-	fontFaces = window[FONT_FACE_PROPERTY_NAME] = new Map();
+  fontFaces = window[FONT_FACE_PROPERTY_NAME] = new Map();
 }
 if (window[WORKLET_PROPERTY_NAME]) {
-	worklets = window[WORKLET_PROPERTY_NAME];
+  worklets = window[WORKLET_PROPERTY_NAME];
 } else {
-	worklets = window[WORKLET_PROPERTY_NAME] = new Map();
+  worklets = window[WORKLET_PROPERTY_NAME] = new Map();
 }
-
 init();
-new MutationObserver(init).observe(document, { childList: true });
-
+new MutationObserver(init).observe(document, {
+  childList: true
+});
 function init() {
-	if (document instanceof Document) {
-		document.addEventListener(NEW_FONT_FACE_EVENT, event => {
-			const detail = event.detail;
-			const key = Object.assign({}, detail);
-			delete key.src;
-			fontFaces.set(JSON.stringify(key), detail);
-		});
-		document.addEventListener(DELETE_FONT_EVENT, event => {
-			const detail = event.detail;
-			const key = Object.assign({}, detail);
-			delete key.src;
-			fontFaces.delete(JSON.stringify(key));
-		});
-		document.addEventListener(CLEAR_FONTS_EVENT, () => fontFaces = new Map());
-		document.addEventListener(NEW_WORKLET_EVENT, event => {
-			const detail = event.detail;
-			worklets.set(detail.moduleURL, detail);
-		});
-	}
+  if (document instanceof Document) {
+    document.addEventListener(NEW_FONT_FACE_EVENT, event => {
+      const detail = event.detail;
+      const key = Object.assign({}, detail);
+      delete key.src;
+      fontFaces.set(JSON.stringify(key), detail);
+    });
+    document.addEventListener(DELETE_FONT_EVENT, event => {
+      const detail = event.detail;
+      const key = Object.assign({}, detail);
+      delete key.src;
+      fontFaces.delete(JSON.stringify(key));
+    });
+    document.addEventListener(CLEAR_FONTS_EVENT, () => fontFaces = new Map());
+    document.addEventListener(NEW_WORKLET_EVENT, event => {
+      const detail = event.detail;
+      worklets.set(detail.moduleURL, detail);
+    });
+  }
 }
-
-export {
-	getFontsData,
-	getWorkletsData,
-	loadDeferredImagesStart,
-	loadDeferredImagesEnd,
-	loadDeferredImagesResetZoomLevel,
-	LOAD_IMAGE_EVENT,
-	IMAGE_LOADED_EVENT
-};
-
 function getFontsData() {
-	return Array.from(fontFaces.values());
+  return Array.from(fontFaces.values());
 }
-
 function getWorkletsData() {
-	return Array.from(worklets.values());
+  return Array.from(worklets.values());
 }
-
 function loadDeferredImagesStart(options) {
-	if (options.loadDeferredImagesBlockCookies) {
-		document.dispatchEvent(new CustomEvent(BLOCK_COOKIES_START_EVENT));
-	}
-	if (options.loadDeferredImagesBlockStorage) {
-		document.dispatchEvent(new CustomEvent(BLOCK_STORAGE_START_EVENT));
-	}
-	if (options.loadDeferredImagesDispatchScrollEvent) {
-		document.dispatchEvent(new CustomEvent(DISPATCH_SCROLL_START_EVENT));
-	}
-	if (options.loadDeferredImagesKeepZoomLevel) {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_KEEP_ZOOM_LEVEL_START_EVENT));
-	} else {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_START_EVENT));
-	}
+  if (options.loadDeferredImagesBlockCookies) {
+    document.dispatchEvent(new CustomEvent(BLOCK_COOKIES_START_EVENT));
+  }
+  if (options.loadDeferredImagesBlockStorage) {
+    document.dispatchEvent(new CustomEvent(BLOCK_STORAGE_START_EVENT));
+  }
+  if (options.loadDeferredImagesDispatchScrollEvent) {
+    document.dispatchEvent(new CustomEvent(DISPATCH_SCROLL_START_EVENT));
+  }
+  if (options.loadDeferredImagesKeepZoomLevel) {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_KEEP_ZOOM_LEVEL_START_EVENT));
+  } else {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_START_EVENT));
+  }
 }
-
 function loadDeferredImagesEnd(options) {
-	if (options.loadDeferredImagesBlockCookies) {
-		document.dispatchEvent(new CustomEvent(BLOCK_COOKIES_END_EVENT));
-	}
-	if (options.loadDeferredImagesBlockStorage) {
-		document.dispatchEvent(new CustomEvent(BLOCK_STORAGE_END_EVENT));
-	}
-	if (options.loadDeferredImagesDispatchScrollEvent) {
-		document.dispatchEvent(new CustomEvent(DISPATCH_SCROLL_END_EVENT));
-	}
-	if (options.loadDeferredImagesKeepZoomLevel) {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_KEEP_ZOOM_LEVEL_END_EVENT));
-	} else {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_END_EVENT));
-	}
+  if (options.loadDeferredImagesBlockCookies) {
+    document.dispatchEvent(new CustomEvent(BLOCK_COOKIES_END_EVENT));
+  }
+  if (options.loadDeferredImagesBlockStorage) {
+    document.dispatchEvent(new CustomEvent(BLOCK_STORAGE_END_EVENT));
+  }
+  if (options.loadDeferredImagesDispatchScrollEvent) {
+    document.dispatchEvent(new CustomEvent(DISPATCH_SCROLL_END_EVENT));
+  }
+  if (options.loadDeferredImagesKeepZoomLevel) {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_KEEP_ZOOM_LEVEL_END_EVENT));
+  } else {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_END_EVENT));
+  }
 }
-
 function loadDeferredImagesResetZoomLevel(options) {
-	if (options.loadDeferredImagesKeepZoomLevel) {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_RESET_ZOOM_LEVEL_EVENT));
-	} else {
-		document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_RESET_EVENT));
-	}
+  if (options.loadDeferredImagesKeepZoomLevel) {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_RESET_ZOOM_LEVEL_EVENT));
+  } else {
+    document.dispatchEvent(new CustomEvent(LOAD_DEFERRED_IMAGES_RESET_EVENT));
+  }
 }

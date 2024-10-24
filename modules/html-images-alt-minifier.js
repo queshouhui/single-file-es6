@@ -1,3 +1,12 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.process = process;
+var srcsetParser = _interopRequireWildcard(require("./../vendor/html-srcset-parser.js"));
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
 /*
  * Copyright 2010-2022 Gildas Lormeau
  * contact : gildas.lormeau <at> gmail.com
@@ -21,93 +30,94 @@
  *   Source.
  */
 
-import * as srcsetParser from "./../vendor/html-srcset-parser.js";
-
 const EMPTY_RESOURCE = "data:,";
-
-export {
-	process
-};
-
 function process(doc) {
-	doc.querySelectorAll("picture").forEach(pictureElement => {
-		const imgElement = pictureElement.querySelector("img");
-		if (imgElement) {
-			let { src, srcset } = getImgSrcData(imgElement);
-			if (!src) {
-				const data = getSourceSrcData(Array.from(pictureElement.querySelectorAll("source")).reverse());
-				src = data.src;
-				if (!srcset) {
-					srcset = data.srcset;
-				}
-			}
-			setSrc({ src, srcset }, imgElement, pictureElement);
-		}
-	});
-	doc.querySelectorAll(":not(picture) > img[srcset]").forEach(imgElement => setSrc(getImgSrcData(imgElement), imgElement));
+  doc.querySelectorAll("picture").forEach(pictureElement => {
+    const imgElement = pictureElement.querySelector("img");
+    if (imgElement) {
+      let {
+        src,
+        srcset
+      } = getImgSrcData(imgElement);
+      if (!src) {
+        const data = getSourceSrcData(Array.from(pictureElement.querySelectorAll("source")).reverse());
+        src = data.src;
+        if (!srcset) {
+          srcset = data.srcset;
+        }
+      }
+      setSrc({
+        src,
+        srcset
+      }, imgElement, pictureElement);
+    }
+  });
+  doc.querySelectorAll(":not(picture) > img[srcset]").forEach(imgElement => setSrc(getImgSrcData(imgElement), imgElement));
 }
-
 function getImgSrcData(imgElement) {
-	let src = imgElement.getAttribute("src");
-	if (src == EMPTY_RESOURCE) {
-		src = null;
-	}
-	let srcset = getSourceSrc(imgElement.getAttribute("srcset"));
-	if (srcset == EMPTY_RESOURCE) {
-		srcset = null;
-	}
-	return { src, srcset };
+  let src = imgElement.getAttribute("src");
+  if (src == EMPTY_RESOURCE) {
+    src = null;
+  }
+  let srcset = getSourceSrc(imgElement.getAttribute("srcset"));
+  if (srcset == EMPTY_RESOURCE) {
+    srcset = null;
+  }
+  return {
+    src,
+    srcset
+  };
 }
-
 function getSourceSrcData(sources) {
-	let source = sources.find(source => source.src);
-	let src = source && source.src;
-	let srcset = source && source.srcset;
-	if (!src) {
-		source = sources.find(source => getSourceSrc(source.src));
-		src = source && source.src;
-		if (src == EMPTY_RESOURCE) {
-			src = null;
-		}
-	}
-	if (!srcset) {
-		source = sources.find(source => getSourceSrc(source.srcset));
-		srcset = source && source.srcset;
-		if (srcset == EMPTY_RESOURCE) {
-			srcset = null;
-		}
-	}
-	return { src, srcset };
+  let source = sources.find(source => source.src);
+  let src = source && source.src;
+  let srcset = source && source.srcset;
+  if (!src) {
+    source = sources.find(source => getSourceSrc(source.src));
+    src = source && source.src;
+    if (src == EMPTY_RESOURCE) {
+      src = null;
+    }
+  }
+  if (!srcset) {
+    source = sources.find(source => getSourceSrc(source.srcset));
+    srcset = source && source.srcset;
+    if (srcset == EMPTY_RESOURCE) {
+      srcset = null;
+    }
+  }
+  return {
+    src,
+    srcset
+  };
 }
-
 function setSrc(srcData, imgElement, pictureElement) {
-	if (srcData.src) {
-		imgElement.setAttribute("src", srcData.src);
-		imgElement.setAttribute("srcset", "");
-		imgElement.setAttribute("sizes", "");
-	} else {
-		imgElement.setAttribute("src", EMPTY_RESOURCE);
-		if (srcData.srcset) {
-			imgElement.setAttribute("srcset", srcData.srcset);
-		} else {
-			imgElement.setAttribute("srcset", "");
-			imgElement.setAttribute("sizes", "");
-		}
-	}
-	if (pictureElement) {
-		pictureElement.querySelectorAll("source").forEach(sourceElement => sourceElement.remove());
-	}
+  if (srcData.src) {
+    imgElement.setAttribute("src", srcData.src);
+    imgElement.setAttribute("srcset", "");
+    imgElement.setAttribute("sizes", "");
+  } else {
+    imgElement.setAttribute("src", EMPTY_RESOURCE);
+    if (srcData.srcset) {
+      imgElement.setAttribute("srcset", srcData.srcset);
+    } else {
+      imgElement.setAttribute("srcset", "");
+      imgElement.setAttribute("sizes", "");
+    }
+  }
+  if (pictureElement) {
+    pictureElement.querySelectorAll("source").forEach(sourceElement => sourceElement.remove());
+  }
 }
-
 function getSourceSrc(sourceSrcSet) {
-	if (sourceSrcSet) {
-		try {
-			const srcset = srcsetParser.process(sourceSrcSet);
-			if (srcset.length) {
-				return (srcset.find(srcset => srcset.url)).url;
-			}
-		} catch (error) {
-			// ignored
-		}
-	}
+  if (sourceSrcSet) {
+    try {
+      const srcset = srcsetParser.process(sourceSrcSet);
+      if (srcset.length) {
+        return srcset.find(srcset => srcset.url).url;
+      }
+    } catch (error) {
+      // ignored
+    }
+  }
 }

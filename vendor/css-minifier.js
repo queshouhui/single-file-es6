@@ -1,3 +1,10 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.defaultOptions = void 0;
+exports.processString = processString;
 /*
  * The MIT License (MIT)
  * 
@@ -70,15 +77,14 @@ const ___PRESERVED_TOKEN_ = "___PRESERVED_TOKEN_";
  * @type {options} - UglifyCSS options
  */
 
-const defaultOptions = {
-	maxLineLen: 0,
-	expandVars: false,
-	uglyComments: false,
-	cuteComments: false,
-	debug: false,
-	output: ""
+const defaultOptions = exports.defaultOptions = {
+  maxLineLen: 0,
+  expandVars: false,
+  uglyComments: false,
+  cuteComments: false,
+  debug: false,
+  output: ""
 };
-
 const REGEXP_DATA_URI = /url\(\s*(["']?)data:/g;
 const REGEXP_WHITE_SPACES = /\s+/g;
 const REGEXP_NEW_LINE = /\n/g;
@@ -95,75 +101,64 @@ const REGEXP_NEW_LINE = /\n/g;
  */
 
 function extractDataUrls(css, preservedTokens) {
+  // Leave data urls alone to increase parse performance.
+  const pattern = REGEXP_DATA_URI;
+  const maxIndex = css.length - 1;
+  const sb = [];
+  let appendIndex = 0,
+    match;
 
-	// Leave data urls alone to increase parse performance.
-	const pattern = REGEXP_DATA_URI;
-	const maxIndex = css.length - 1;
-	const sb = [];
+  // Since we need to account for non-base64 data urls, we need to handle
+  // ' and ) being part of the data string. Hence switching to indexOf,
+  // to determine whether or not we have matching string terminators and
+  // handling sb appends directly, instead of using matcher.append* methods.
 
-	let appendIndex = 0, match;
+  while ((match = pattern.exec(css)) !== null) {
+    const startIndex = match.index + 4; // 'url('.length()
+    let terminator = match[1]; // ', " or empty (not quoted)
 
-	// Since we need to account for non-base64 data urls, we need to handle
-	// ' and ) being part of the data string. Hence switching to indexOf,
-	// to determine whether or not we have matching string terminators and
-	// handling sb appends directly, instead of using matcher.append* methods.
+    if (terminator.length === 0) {
+      terminator = ")";
+    }
+    let foundTerminator = false,
+      endIndex = pattern.lastIndex - 1;
+    while (foundTerminator === false && endIndex + 1 <= maxIndex && endIndex != -1) {
+      endIndex = css.indexOf(terminator, endIndex + 1);
 
-	while ((match = pattern.exec(css)) !== null) {
+      // endIndex == 0 doesn't really apply here
+      if (endIndex > 0 && css.charAt(endIndex - 1) !== "\\") {
+        foundTerminator = true;
+        if (")" != terminator) {
+          endIndex = css.indexOf(")", endIndex);
+        }
+      }
+    }
 
-		const startIndex = match.index + 4;  // 'url('.length()
-		let terminator = match[1];         // ', " or empty (not quoted)
-
-		if (terminator.length === 0) {
-			terminator = ")";
-		}
-
-		let foundTerminator = false, endIndex = pattern.lastIndex - 1;
-
-		while (foundTerminator === false && endIndex + 1 <= maxIndex && endIndex != -1) {
-			endIndex = css.indexOf(terminator, endIndex + 1);
-
-			// endIndex == 0 doesn't really apply here
-			if ((endIndex > 0) && (css.charAt(endIndex - 1) !== "\\")) {
-				foundTerminator = true;
-				if (")" != terminator) {
-					endIndex = css.indexOf(")", endIndex);
-				}
-			}
-		}
-
-		// Enough searching, start moving stuff over to the buffer
-		sb.push(css.substring(appendIndex, match.index));
-
-		if (foundTerminator) {
-
-			let token = css.substring(startIndex, endIndex);
-			const parts = token.split(",");
-			if (parts.length > 1 && parts[0].slice(-7) == ";base64") {
-				token = token.replace(REGEXP_WHITE_SPACES, "");
-			} else {
-				token = token.replace(REGEXP_NEW_LINE, " ");
-				token = token.replace(REGEXP_WHITE_SPACES, " ");
-				token = token.replace(REGEXP_PRESERVE_HSLA1, "");
-			}
-
-			preservedTokens.push(token);
-
-			const preserver = "url(" + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___)";
-			sb.push(preserver);
-
-			appendIndex = endIndex + 1;
-		} else {
-			// No end terminator found, re-add the whole match. Should we throw/warn here?
-			sb.push(css.substring(match.index, pattern.lastIndex));
-			appendIndex = pattern.lastIndex;
-		}
-	}
-
-	sb.push(css.substring(appendIndex));
-
-	return sb.join("");
+    // Enough searching, start moving stuff over to the buffer
+    sb.push(css.substring(appendIndex, match.index));
+    if (foundTerminator) {
+      let token = css.substring(startIndex, endIndex);
+      const parts = token.split(",");
+      if (parts.length > 1 && parts[0].slice(-7) == ";base64") {
+        token = token.replace(REGEXP_WHITE_SPACES, "");
+      } else {
+        token = token.replace(REGEXP_NEW_LINE, " ");
+        token = token.replace(REGEXP_WHITE_SPACES, " ");
+        token = token.replace(REGEXP_PRESERVE_HSLA1, "");
+      }
+      preservedTokens.push(token);
+      const preserver = "url(" + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___)";
+      sb.push(preserver);
+      appendIndex = endIndex + 1;
+    } else {
+      // No end terminator found, re-add the whole match. Should we throw/warn here?
+      sb.push(css.substring(match.index, pattern.lastIndex));
+      appendIndex = pattern.lastIndex;
+    }
+  }
+  sb.push(css.substring(appendIndex));
+  return sb.join("");
 }
-
 const REGEXP_HEX_COLORS = /(=\s*?["']?)?#([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])(\}|[^0-9a-f{][^{]*?\})/gi;
 
 /**
@@ -183,44 +178,32 @@ const REGEXP_HEX_COLORS = /(=\s*?["']?)?#([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f]
  */
 
 function compressHexColors(css) {
+  // Look for hex colors inside { ... } (to avoid IDs) and which don't have a =, or a " in front of them (to avoid filters)
 
-	// Look for hex colors inside { ... } (to avoid IDs) and which don't have a =, or a " in front of them (to avoid filters)
-
-	const pattern = REGEXP_HEX_COLORS;
-	const sb = [];
-
-	let index = 0, match;
-
-	while ((match = pattern.exec(css)) !== null) {
-
-		sb.push(css.substring(index, match.index));
-
-		const isFilter = match[1];
-
-		if (isFilter) {
-			// Restore, maintain case, otherwise filter will break
-			sb.push(match[1] + "#" + (match[2] + match[3] + match[4] + match[5] + match[6] + match[7]));
-		} else {
-			if (match[2].toLowerCase() == match[3].toLowerCase() &&
-				match[4].toLowerCase() == match[5].toLowerCase() &&
-				match[6].toLowerCase() == match[7].toLowerCase()) {
-
-				// Compress.
-				sb.push("#" + (match[3] + match[5] + match[7]).toLowerCase());
-			} else {
-				// Non compressible color, restore but lower case.
-				sb.push("#" + (match[2] + match[3] + match[4] + match[5] + match[6] + match[7]).toLowerCase());
-			}
-		}
-
-		index = pattern.lastIndex = pattern.lastIndex - match[8].length;
-	}
-
-	sb.push(css.substring(index));
-
-	return sb.join("");
+  const pattern = REGEXP_HEX_COLORS;
+  const sb = [];
+  let index = 0,
+    match;
+  while ((match = pattern.exec(css)) !== null) {
+    sb.push(css.substring(index, match.index));
+    const isFilter = match[1];
+    if (isFilter) {
+      // Restore, maintain case, otherwise filter will break
+      sb.push(match[1] + "#" + (match[2] + match[3] + match[4] + match[5] + match[6] + match[7]));
+    } else {
+      if (match[2].toLowerCase() == match[3].toLowerCase() && match[4].toLowerCase() == match[5].toLowerCase() && match[6].toLowerCase() == match[7].toLowerCase()) {
+        // Compress.
+        sb.push("#" + (match[3] + match[5] + match[7]).toLowerCase());
+      } else {
+        // Non compressible color, restore but lower case.
+        sb.push("#" + (match[2] + match[3] + match[4] + match[5] + match[6] + match[7]).toLowerCase());
+      }
+    }
+    index = pattern.lastIndex = pattern.lastIndex - match[8].length;
+  }
+  sb.push(css.substring(index));
+  return sb.join("");
 }
-
 const REGEXP_KEYFRAMES = /@[a-z0-9-_]*keyframes\s+[a-z0-9-_]+\s*{/gi;
 const REGEXP_WHITE_SPACE = /(^\s|\s$)/g;
 
@@ -233,83 +216,59 @@ const REGEXP_WHITE_SPACE = /(^\s|\s$)/g;
  */
 
 function keyframes(content, preservedTokens) {
+  const pattern = REGEXP_KEYFRAMES;
+  let index = 0,
+    buffer;
+  const preserve = (part, i) => {
+    part = part.replace(REGEXP_WHITE_SPACE, "");
+    if (part.charAt(0) === "0") {
+      preservedTokens.push(part);
+      buffer[i] = ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
+    }
+  };
+  while (true) {
+    // eslint-disable-line no-constant-condition
 
-	const pattern = REGEXP_KEYFRAMES;
-
-	let index = 0, buffer;
-
-	const preserve = (part, i) => {
-		part = part.replace(REGEXP_WHITE_SPACE, "");
-		if (part.charAt(0) === "0") {
-			preservedTokens.push(part);
-			buffer[i] = ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
-		}
-	};
-
-	while (true) { // eslint-disable-line no-constant-condition
-
-		let level = 0;
-		buffer = "";
-
-		let startIndex = content.slice(index).search(pattern);
-		if (startIndex < 0) {
-			break;
-		}
-
-		index += startIndex;
-		startIndex = index;
-
-		const len = content.length;
-		const buffers = [];
-
-		for (; index < len; ++index) {
-
-			const ch = content.charAt(index);
-
-			if (ch === "{") {
-
-				if (level === 0) {
-					buffers.push(buffer.replace(REGEXP_WHITE_SPACE, ""));
-
-				} else if (level === 1) {
-
-					buffer = buffer.split(",");
-
-					buffer.forEach(preserve);
-
-					buffers.push(buffer.join(",").replace(REGEXP_WHITE_SPACE, ""));
-				}
-
-				buffer = "";
-				level += 1;
-
-			} else if (ch === "}") {
-
-				if (level === 2) {
-					buffers.push("{" + buffer.replace(REGEXP_WHITE_SPACE, "") + "}");
-					buffer = "";
-
-				} else if (level === 1) {
-					content = content.slice(0, startIndex) +
-						buffers.shift() + "{" +
-						buffers.join("") +
-						content.slice(index);
-					break;
-				}
-
-				level -= 1;
-			}
-
-			if (level < 0) {
-				break;
-
-			} else if (ch !== "{" && ch !== "}") {
-				buffer += ch;
-			}
-		}
-	}
-
-	return content;
+    let level = 0;
+    buffer = "";
+    let startIndex = content.slice(index).search(pattern);
+    if (startIndex < 0) {
+      break;
+    }
+    index += startIndex;
+    startIndex = index;
+    const len = content.length;
+    const buffers = [];
+    for (; index < len; ++index) {
+      const ch = content.charAt(index);
+      if (ch === "{") {
+        if (level === 0) {
+          buffers.push(buffer.replace(REGEXP_WHITE_SPACE, ""));
+        } else if (level === 1) {
+          buffer = buffer.split(",");
+          buffer.forEach(preserve);
+          buffers.push(buffer.join(",").replace(REGEXP_WHITE_SPACE, ""));
+        }
+        buffer = "";
+        level += 1;
+      } else if (ch === "}") {
+        if (level === 2) {
+          buffers.push("{" + buffer.replace(REGEXP_WHITE_SPACE, "") + "}");
+          buffer = "";
+        } else if (level === 1) {
+          content = content.slice(0, startIndex) + buffers.shift() + "{" + buffers.join("") + content.slice(index);
+          break;
+        }
+        level -= 1;
+      }
+      if (level < 0) {
+        break;
+      } else if (ch !== "{" && ch !== "}") {
+        buffer += ch;
+      }
+    }
+  }
+  return content;
 }
 
 /**
@@ -322,39 +281,31 @@ function keyframes(content, preservedTokens) {
  */
 
 function collectComments(content, comments) {
+  const table = [];
+  let from = 0,
+    end;
+  while (true) {
+    // eslint-disable-line no-constant-condition
 
-	const table = [];
-
-	let from = 0, end;
-
-	while (true) { // eslint-disable-line no-constant-condition
-
-		const start = content.indexOf("/*", from);
-
-		if (start > -1) {
-
-			end = content.indexOf("*/", start + 2);
-
-			if (end > -1) {
-				comments.push(content.slice(start + 2, end));
-				table.push(content.slice(from, start));
-				table.push("/*___PRESERVE_CANDIDATE_COMMENT_" + (comments.length - 1) + "___*/");
-				from = end + 2;
-
-			} else {
-				// unterminated comment
-				end = -2;
-				break;
-			}
-
-		} else {
-			break;
-		}
-	}
-
-	table.push(content.slice(end + 2));
-
-	return table.join("");
+    const start = content.indexOf("/*", from);
+    if (start > -1) {
+      end = content.indexOf("*/", start + 2);
+      if (end > -1) {
+        comments.push(content.slice(start + 2, end));
+        table.push(content.slice(from, start));
+        table.push("/*___PRESERVE_CANDIDATE_COMMENT_" + (comments.length - 1) + "___*/");
+        from = end + 2;
+      } else {
+        // unterminated comment
+        end = -2;
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  table.push(content.slice(end + 2));
+  return table.join("");
 }
 
 /**
@@ -435,366 +386,341 @@ const REGEXP_REPLACE_HASH_COLOR_SHORT5 = /(:|\s)(#c0c0c0)(;|})/g;
 const REGEXP_REPLACE_HASH_COLOR_SHORT6 = /(:|\s)(#008080)(;|})/g;
 const REGEXP_REPLACE_HASH_COLOR_SHORT7 = /(:|\s)(#ffa500)(;|})/g;
 const REGEXP_REPLACE_HASH_COLOR_SHORT8 = /(:|\s)(#800000)(;|})/g;
-
 function processString(content = "", options = defaultOptions) {
+  const comments = [];
+  const preservedTokens = [];
+  let pattern;
+  const originalContent = content;
+  content = extractDataUrls(content, preservedTokens);
+  content = collectComments(content, comments);
+  preserveString(REGEXP_PRESERVE_STRING1);
+  preserveString(REGEXP_PRESERVE_STRING1_BIS);
+  preserveString(REGEXP_PRESERVE_STRING1_TER);
+  preserveString(REGEXP_PRESERVE_STRING2);
+  preserveString(REGEXP_PRESERVE_STRING2_BIS);
+  preserveString(REGEXP_PRESERVE_STRING2_TER);
+  function preserveString(pattern) {
+    content = content.replace(pattern, token => {
+      const quote = token.substring(0, 1);
+      token = token.slice(1, -1);
+      // maybe the string contains a comment-like substring or more? put'em back then
+      if (token.indexOf("___PRESERVE_CANDIDATE_COMMENT_") >= 0) {
+        for (let i = 0, len = comments.length; i < len; i += 1) {
+          token = token.replace("___PRESERVE_CANDIDATE_COMMENT_" + i + "___", comments[i]);
+        }
+      }
+      // minify alpha opacity in filter strings
+      token = token.replace(REGEXP_MINIFY_ALPHA, "alpha(opacity=");
+      preservedTokens.push(token);
+      return quote + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___" + quote;
+    });
+  }
 
-	const comments = [];
-	const preservedTokens = [];
+  // strings are safe, now wrestle the comments
+  for (let i = 0, len = comments.length; i < len; i += 1) {
+    const token = comments[i];
+    const placeholder = "___PRESERVE_CANDIDATE_COMMENT_" + i + "___";
 
-	let pattern;
+    // ! in the first position of the comment means preserve
+    // so push to the preserved tokens keeping the !
+    if (token.charAt(0) === "!") {
+      if (options.cuteComments) {
+        preservedTokens.push(token.substring(1).replace(REGEXP_PRESERVE_TOKEN1, "\n"));
+      } else if (options.uglyComments) {
+        preservedTokens.push(token.substring(1).replace(REGEXP_PRESERVE_TOKEN2, ""));
+      } else {
+        preservedTokens.push(token);
+      }
+      content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+      continue;
+    }
 
-	const originalContent = content;
-	content = extractDataUrls(content, preservedTokens);
-	content = collectComments(content, comments);
+    // \ in the last position looks like hack for Mac/IE5
+    // shorten that to /*\*/ and the next one to /**/
+    if (token.charAt(token.length - 1) === "\\") {
+      preservedTokens.push("\\");
+      content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+      i = i + 1; // attn: advancing the loop
+      preservedTokens.push("");
+      content = content.replace("___PRESERVE_CANDIDATE_COMMENT_" + i + "___", ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+      continue;
+    }
 
-	preserveString(REGEXP_PRESERVE_STRING1);
-	preserveString(REGEXP_PRESERVE_STRING1_BIS);
-	preserveString(REGEXP_PRESERVE_STRING1_TER);
-	preserveString(REGEXP_PRESERVE_STRING2);
-	preserveString(REGEXP_PRESERVE_STRING2_BIS);
-	preserveString(REGEXP_PRESERVE_STRING2_TER);
+    // keep empty comments after child selectors (IE7 hack)
+    // e.g. html >/**/ body
+    if (token.length === 0) {
+      const startIndex = content.indexOf(placeholder);
+      if (startIndex > 2) {
+        if (content.charAt(startIndex - 3) === ">") {
+          preservedTokens.push("");
+          content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+        }
+      }
+    }
 
-	function preserveString(pattern) {
-		content = content.replace(pattern, token => {
-			const quote = token.substring(0, 1);
-			token = token.slice(1, -1);
-			// maybe the string contains a comment-like substring or more? put'em back then
-			if (token.indexOf("___PRESERVE_CANDIDATE_COMMENT_") >= 0) {
-				for (let i = 0, len = comments.length; i < len; i += 1) {
-					token = token.replace("___PRESERVE_CANDIDATE_COMMENT_" + i + "___", comments[i]);
-				}
-			}
-			// minify alpha opacity in filter strings
-			token = token.replace(REGEXP_MINIFY_ALPHA, "alpha(opacity=");
-			preservedTokens.push(token);
-			return quote + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___" + quote;
-		});
-	}
+    // in all other cases kill the comment
+    content = content.replace(`/*${placeholder}*/`, "");
+  }
 
-	// strings are safe, now wrestle the comments
-	for (let i = 0, len = comments.length; i < len; i += 1) {
+  // parse simple @variables blocks and remove them
+  if (options.expandVars) {
+    const vars = {};
+    pattern = REGEXP_VARIABLES;
+    content = content.replace(pattern, (_, f1) => {
+      pattern = REGEXP_VARIABLE;
+      f1.replace(pattern, (_, f1, f2) => {
+        if (f1 && f2) {
+          vars[f1] = f2;
+        }
+        return "";
+      });
+      return "";
+    });
 
-		const token = comments[i];
-		const placeholder = "___PRESERVE_CANDIDATE_COMMENT_" + i + "___";
+    // replace var(x) with the value of x
+    pattern = REGEXP_VARIABLE_VALUE;
+    content = content.replace(pattern, (_, f1) => {
+      return vars[f1] || "none";
+    });
+  }
 
-		// ! in the first position of the comment means preserve
-		// so push to the preserved tokens keeping the !
-		if (token.charAt(0) === "!") {
-			if (options.cuteComments) {
-				preservedTokens.push(token.substring(1).replace(REGEXP_PRESERVE_TOKEN1, "\n"));
-			} else if (options.uglyComments) {
-				preservedTokens.push(token.substring(1).replace(REGEXP_PRESERVE_TOKEN2, ""));
-			} else {
-				preservedTokens.push(token);
-			}
-			content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
-			continue;
-		}
+  // normalize all whitespace strings to single spaces. Easier to work with that way.
+  content = content.replace(REGEXP_WHITE_SPACES, " ");
 
-		// \ in the last position looks like hack for Mac/IE5
-		// shorten that to /*\*/ and the next one to /**/
-		if (token.charAt(token.length - 1) === "\\") {
-			preservedTokens.push("\\");
-			content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
-			i = i + 1; // attn: advancing the loop
-			preservedTokens.push("");
-			content = content.replace(
-				"___PRESERVE_CANDIDATE_COMMENT_" + i + "___",
-				___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___"
-			);
-			continue;
-		}
+  // preserve formulas in calc() before removing spaces
+  pattern = REGEXP_PRESERVE_CALC;
+  content = content.replace(pattern, (_, f1) => {
+    preservedTokens.push("calc(" + f1.replace(REGEXP_TRIM, "").replace(REGEXP_PRESERVE_CALC2, "(").replace(REGEXP_PRESERVE_CALC3, ")") + ")");
+    return ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
+  });
 
-		// keep empty comments after child selectors (IE7 hack)
-		// e.g. html >/**/ body
-		if (token.length === 0) {
-			const startIndex = content.indexOf(placeholder);
-			if (startIndex > 2) {
-				if (content.charAt(startIndex - 3) === ">") {
-					preservedTokens.push("");
-					content = content.replace(placeholder, ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
-				}
-			}
-		}
+  // preserve matrix
+  pattern = REGEXP_PRESERVE_MATRIX;
+  content = content.replace(pattern, (_, f1) => {
+    preservedTokens.push(f1);
+    return "filter:progid:DXImageTransform.Microsoft.Matrix(" + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___);";
+  });
 
-		// in all other cases kill the comment
-		content = content.replace(`/*${placeholder}*/`, "");
-	}
+  // remove the spaces before the things that should not have spaces before them.
+  // but, be careful not to turn 'p :link {...}' into 'p:link{...}'
+  // swap out any pseudo-class colons with the token, and then swap back.
+  try {
+    pattern = REGEXP_REMOVE_SPACES;
+    content = content.replace(pattern, token => token.replace(REGEXP_COLUMN, "___PSEUDOCLASSCOLON___"));
+  } catch (_error) {
+    // ignored
+  }
 
-	// parse simple @variables blocks and remove them
-	if (options.expandVars) {
-		const vars = {};
-		pattern = REGEXP_VARIABLES;
-		content = content.replace(pattern, (_, f1) => {
-			pattern = REGEXP_VARIABLE;
-			f1.replace(pattern, (_, f1, f2) => {
-				if (f1 && f2) {
-					vars[f1] = f2;
-				}
-				return "";
-			});
-			return "";
-		});
+  // remove spaces before the things that should not have spaces before them.
+  content = content.replace(REGEXP_REMOVE_SPACES2, "$1");
+  content = content.replace(REGEXP_REMOVE_SPACES2_BIS, "$1$2");
 
-		// replace var(x) with the value of x
-		pattern = REGEXP_VARIABLE_VALUE;
-		content = content.replace(pattern, (_, f1) => {
-			return vars[f1] || "none";
-		});
-	}
+  // restore spaces for !important
+  content = content.replace(REGEXP_RESTORE_SPACE_IMPORTANT, " !important");
 
-	// normalize all whitespace strings to single spaces. Easier to work with that way.
-	content = content.replace(REGEXP_WHITE_SPACES, " ");
+  // bring back the colon
+  content = content.replace(REGEXP_PSEUDOCLASSCOLON, ":");
 
-	// preserve formulas in calc() before removing spaces
-	pattern = REGEXP_PRESERVE_CALC;
-	content = content.replace(pattern, (_, f1) => {
-		preservedTokens.push(
-			"calc(" +
-			f1.replace(REGEXP_TRIM, "")
-				.replace(REGEXP_PRESERVE_CALC2, "(")
-				.replace(REGEXP_PRESERVE_CALC3, ")") +
-			")"
-		);
-		return ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
-	});
+  // preserve 0 followed by a time unit for properties using time units
+  pattern = REGEXP_PRESERVE_ZERO_UNIT;
+  content = content.replace(pattern, (_, f1, f2) => {
+    f2 = f2.replace(REGEXP_PRESERVE_ZERO_UNIT1, (_, g1, g2) => {
+      preservedTokens.push("0" + g2);
+      return g1 + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
+    });
+    return f1 + ":" + f2;
+  });
 
-	// preserve matrix
-	pattern = REGEXP_PRESERVE_MATRIX;
-	content = content.replace(pattern, (_, f1) => {
-		preservedTokens.push(f1);
-		return "filter:progid:DXImageTransform.Microsoft.Matrix(" + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___);";
-	});
+  // preserve unit for flex-basis within flex and flex-basis (ie10 bug)
+  pattern = REGEXP_PRESERVE_FLEX;
+  content = content.replace(pattern, (_, f1, f2) => {
+    let f2b = f2.split(REGEXP_SPACES);
+    preservedTokens.push(f2b.pop());
+    f2b.push(___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+    f2b = f2b.join(" ");
+    return `${f1}:${f2b}`;
+  });
 
-	// remove the spaces before the things that should not have spaces before them.
-	// but, be careful not to turn 'p :link {...}' into 'p:link{...}'
-	// swap out any pseudo-class colons with the token, and then swap back.
-	try {
-		pattern = REGEXP_REMOVE_SPACES;
-		content = content.replace(pattern, token => token.replace(REGEXP_COLUMN, "___PSEUDOCLASSCOLON___"));
-	} catch (_error) {
-		// ignored
-	}
+  // preserve 0% in hsl and hsla color definitions
+  content = content.replace(REGEXP_PRESERVE_HSLA, (_, f1, f2) => {
+    const f0 = [];
+    f2.split(",").forEach(part => {
+      part = part.replace(REGEXP_PRESERVE_HSLA1, "");
+      if (part === "0%") {
+        preservedTokens.push("0%");
+        f0.push(___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
+      } else {
+        f0.push(part);
+      }
+    });
+    return f1 + "(" + f0.join(",") + ")";
+  });
 
-	// remove spaces before the things that should not have spaces before them.
-	content = content.replace(REGEXP_REMOVE_SPACES2, "$1");
-	content = content.replace(REGEXP_REMOVE_SPACES2_BIS, "$1$2");
+  // preserve 0 followed by unit in keyframes steps (WIP)
+  content = keyframes(content, preservedTokens);
 
-	// restore spaces for !important
-	content = content.replace(REGEXP_RESTORE_SPACE_IMPORTANT, " !important");
+  // retain space for special IE6 cases
+  content = content.replace(REGEXP_RETAIN_SPACE_IE6, (_, f1, f2) => ":first-" + f1.toLowerCase() + " " + f2);
 
-	// bring back the colon
-	content = content.replace(REGEXP_PSEUDOCLASSCOLON, ":");
+  // newlines before and after the end of a preserved comment
+  if (options.cuteComments) {
+    content = content.replace(REGEXP_NEWLINE1, "___PRESERVED_NEWLINE___/*");
+    content = content.replace(REGEXP_NEWLINE2, "*/___PRESERVED_NEWLINE___");
+    // no space after the end of a preserved comment
+  } else {
+    content = content.replace(REGEXP_NEWLINE2, "*/");
+  }
 
-	// preserve 0 followed by a time unit for properties using time units
-	pattern = REGEXP_PRESERVE_ZERO_UNIT;
-	content = content.replace(pattern, (_, f1, f2) => {
+  // If there are multiple @charset directives, push them to the top of the file.
+  pattern = REGEXP_CHARSET;
+  content = content.replace(pattern, (_, f1, f2, f3) => f2.toLowerCase() + f3 + f1);
 
-		f2 = f2.replace(REGEXP_PRESERVE_ZERO_UNIT1, (_, g1, g2) => {
-			preservedTokens.push("0" + g2);
-			return g1 + ___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___";
-		});
+  // When all @charset are at the top, remove the second and after (as they are completely ignored).
+  pattern = REGEXP_REMOVE_SECOND_CHARSET;
+  content = content.replace(pattern, (_, __, f2, f3, f4) => f2 + f3.toLowerCase() + f4);
 
-		return f1 + ":" + f2;
-	});
+  // lowercase some popular @directives (@charset is done right above)
+  pattern = REGEXP_LOWERCASE_DIRECTIVES;
+  content = content.replace(pattern, (_, f1) => "@" + f1.toLowerCase());
 
-	// preserve unit for flex-basis within flex and flex-basis (ie10 bug)
-	pattern = REGEXP_PRESERVE_FLEX;
-	content = content.replace(pattern, (_, f1, f2) => {
-		let f2b = f2.split(REGEXP_SPACES);
-		preservedTokens.push(f2b.pop());
-		f2b.push(___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
-		f2b = f2b.join(" ");
-		return `${f1}:${f2b}`;
-	});
+  // lowercase some more common pseudo-elements
+  pattern = REGEXP_LOWERCASE_PSEUDO_ELEMENTS;
+  content = content.replace(pattern, (_, f1) => ":" + f1.toLowerCase());
 
-	// preserve 0% in hsl and hsla color definitions
-	content = content.replace(REGEXP_PRESERVE_HSLA, (_, f1, f2) => {
-		const f0 = [];
-		f2.split(",").forEach(part => {
-			part = part.replace(REGEXP_PRESERVE_HSLA1, "");
-			if (part === "0%") {
-				preservedTokens.push("0%");
-				f0.push(___PRESERVED_TOKEN_ + (preservedTokens.length - 1) + "___");
-			} else {
-				f0.push(part);
-			}
-		});
-		return f1 + "(" + f0.join(",") + ")";
-	});
+  // if there is a @charset, then only allow one, and push to the top of the file.
+  content = content.replace(REGEXP_CHARSET2, "$2$1");
+  content = content.replace(REGEXP_CHARSET3, "$1");
 
-	// preserve 0 followed by unit in keyframes steps (WIP)
-	content = keyframes(content, preservedTokens);
+  // lowercase some more common functions
+  pattern = REGEXP_LOWERCASE_FUNCTIONS;
+  content = content.replace(pattern, (_, f1) => ":" + f1.toLowerCase() + "(");
 
-	// retain space for special IE6 cases
-	content = content.replace(REGEXP_RETAIN_SPACE_IE6, (_, f1, f2) => ":first-" + f1.toLowerCase() + " " + f2);
+  // lower case some common function that can be values
+  // NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
+  pattern = REGEXP_LOWERCASE_FUNCTIONS2;
+  content = content.replace(pattern, (_, f1, f2) => f1 + f2.toLowerCase());
 
-	// newlines before and after the end of a preserved comment
-	if (options.cuteComments) {
-		content = content.replace(REGEXP_NEWLINE1, "___PRESERVED_NEWLINE___/*");
-		content = content.replace(REGEXP_NEWLINE2, "*/___PRESERVED_NEWLINE___");
-		// no space after the end of a preserved comment
-	} else {
-		content = content.replace(REGEXP_NEWLINE2, "*/");
-	}
+  // put the space back in some cases, to support stuff like
+  // @media screen and (-webkit-min-device-pixel-ratio:0){
+  content = content.replace(REGEXP_RESTORE_SPACE1, "and (");
+  content = content.replace(REGEXP_RESTORE_SPACE2, "$1not (");
+  content = content.replace(REGEXP_RESTORE_SPACE3, "or (");
 
-	// If there are multiple @charset directives, push them to the top of the file.
-	pattern = REGEXP_CHARSET;
-	content = content.replace(pattern, (_, f1, f2, f3) => f2.toLowerCase() + f3 + f1);
+  // remove the spaces after the things that should not have spaces after them.
+  content = content.replace(REGEXP_REMOVE_SPACES3, "$1");
 
-	// When all @charset are at the top, remove the second and after (as they are completely ignored).
-	pattern = REGEXP_REMOVE_SECOND_CHARSET;
-	content = content.replace(pattern, (_, __, f2, f3, f4) => f2 + f3.toLowerCase() + f4);
+  // remove unnecessary semicolons
+  content = content.replace(REGEXP_REMOVE_SEMI_COLUMNS, "}");
 
-	// lowercase some popular @directives (@charset is done right above)
-	pattern = REGEXP_LOWERCASE_DIRECTIVES;
-	content = content.replace(pattern, (_, f1) => "@" + f1.toLowerCase());
+  // replace 0(px,em,%) with 0.
+  // content = content.replace(REGEXP_REPLACE_ZERO, "$10");
 
-	// lowercase some more common pseudo-elements
-	pattern = REGEXP_LOWERCASE_PSEUDO_ELEMENTS;
-	content = content.replace(pattern, (_, f1) => ":" + f1.toLowerCase());
+  // Replace x.0(px,em,%) with x(px,em,%).
+  content = content.replace(REGEXP_REPLACE_ZERO_DOT, "$1$2");
 
-	// if there is a @charset, then only allow one, and push to the top of the file.
-	content = content.replace(REGEXP_CHARSET2, "$2$1");
-	content = content.replace(REGEXP_CHARSET3, "$1");
+  // replace 0 0 0 0; with 0.
+  content = content.replace(REGEXP_REPLACE_4_ZEROS, ":0$1");
+  content = content.replace(REGEXP_REPLACE_3_ZEROS, ":0$1");
+  // content = content.replace(REGEXP_REPLACE_2_ZEROS, ":0$1");
 
-	// lowercase some more common functions
-	pattern = REGEXP_LOWERCASE_FUNCTIONS;
-	content = content.replace(pattern, (_, f1) => ":" + f1.toLowerCase() + "(");
+  // replace background-position:0; with background-position:0 0;
+  // same for transform-origin and box-shadow
+  pattern = REGEXP_REPLACE_1_ZERO;
+  content = content.replace(pattern, (_, f1, f2) => f1.toLowerCase() + ":0 0" + f2);
 
-	// lower case some common function that can be values
-	// NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
-	pattern = REGEXP_LOWERCASE_FUNCTIONS2;
-	content = content.replace(pattern, (_, f1, f2) => f1 + f2.toLowerCase());
+  // replace 0.6 to .6, but only when preceded by : or a white-space
+  content = content.replace(REGEXP_REPLACE_ZERO_DOT_DECIMAL, "$1.$2");
 
-	// put the space back in some cases, to support stuff like
-	// @media screen and (-webkit-min-device-pixel-ratio:0){
-	content = content.replace(REGEXP_RESTORE_SPACE1, "and (");
-	content = content.replace(REGEXP_RESTORE_SPACE2, "$1not (");
-	content = content.replace(REGEXP_RESTORE_SPACE3, "or (");
+  // shorten colors from rgb(51,102,153) to #336699
+  // this makes it more likely that it'll get further compressed in the next step.
+  pattern = REGEXP_REPLACE_RGB;
+  content = content.replace(pattern, (_, f1) => {
+    const rgbcolors = f1.split(",");
+    let hexcolor = "#";
+    for (let i = 0; i < rgbcolors.length; i += 1) {
+      let val = parseInt(rgbcolors[i], 10);
+      if (val < 16) {
+        hexcolor += "0";
+      }
+      if (val > 255) {
+        val = 255;
+      }
+      hexcolor += val.toString(16);
+    }
+    return hexcolor;
+  });
 
-	// remove the spaces after the things that should not have spaces after them.
-	content = content.replace(REGEXP_REMOVE_SPACES3, "$1");
+  // Shorten colors from #AABBCC to #ABC.
+  content = compressHexColors(content);
 
-	// remove unnecessary semicolons
-	content = content.replace(REGEXP_REMOVE_SEMI_COLUMNS, "}");
+  // Replace #f00 -> red
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR, "$1red$3");
 
-	// replace 0(px,em,%) with 0.
-	// content = content.replace(REGEXP_REPLACE_ZERO, "$10");
+  // Replace other short color keywords
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT1, "$1navy$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT2, "$1gray$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT3, "$1olive$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT4, "$1purple$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT5, "$1silver$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT6, "$1teal$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT7, "$1orange$3");
+  content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT8, "$1maroon$3");
 
-	// Replace x.0(px,em,%) with x(px,em,%).
-	content = content.replace(REGEXP_REPLACE_ZERO_DOT, "$1$2");
+  // border: none -> border:0
+  pattern = REGEXP_REPLACE_BORDER_ZERO;
+  content = content.replace(pattern, (_, f1, f2) => f1.toLowerCase() + ":0" + f2);
 
-	// replace 0 0 0 0; with 0.
-	content = content.replace(REGEXP_REPLACE_4_ZEROS, ":0$1");
-	content = content.replace(REGEXP_REPLACE_3_ZEROS, ":0$1");
-	// content = content.replace(REGEXP_REPLACE_2_ZEROS, ":0$1");
+  // shorter opacity IE filter
+  content = content.replace(REGEXP_REPLACE_IE_OPACITY, "alpha(opacity=");
 
-	// replace background-position:0; with background-position:0 0;
-	// same for transform-origin and box-shadow
-	pattern = REGEXP_REPLACE_1_ZERO;
-	content = content.replace(pattern, (_, f1, f2) => f1.toLowerCase() + ":0 0" + f2);
+  // Find a fraction that is used for Opera's -o-device-pixel-ratio query
+  // Add token to add the '\' back in later
+  content = content.replace(REGEXP_REPLACE_QUERY_FRACTION, "($1:$2___QUERY_FRACTION___$3)");
 
-	// replace 0.6 to .6, but only when preceded by : or a white-space
-	content = content.replace(REGEXP_REPLACE_ZERO_DOT_DECIMAL, "$1.$2");
+  // remove empty rules.
+  // content = content.replace(REGEXP_EMPTY_RULES, "");
 
-	// shorten colors from rgb(51,102,153) to #336699
-	// this makes it more likely that it'll get further compressed in the next step.
-	pattern = REGEXP_REPLACE_RGB;
-	content = content.replace(pattern, (_, f1) => {
-		const rgbcolors = f1.split(",");
-		let hexcolor = "#";
-		for (let i = 0; i < rgbcolors.length; i += 1) {
-			let val = parseInt(rgbcolors[i], 10);
-			if (val < 16) {
-				hexcolor += "0";
-			}
-			if (val > 255) {
-				val = 255;
-			}
-			hexcolor += val.toString(16);
-		}
-		return hexcolor;
-	});
+  // Add '\' back to fix Opera -o-device-pixel-ratio query
+  content = content.replace(REGEXP_QUERY_FRACTION, "/");
 
-	// Shorten colors from #AABBCC to #ABC.
-	content = compressHexColors(content);
+  // some source control tools don't like it when files containing lines longer
+  // than, say 8000 characters, are checked in. The linebreak option is used in
+  // that case to split long lines after a specific column.
+  if (options.maxLineLen > 0) {
+    const lines = [];
+    let line = [];
+    for (let i = 0, len = content.length; i < len; i += 1) {
+      const ch = content.charAt(i);
+      line.push(ch);
+      if (ch === "}" && line.length > options.maxLineLen) {
+        lines.push(line.join(""));
+        line = [];
+      }
+    }
+    if (line.length) {
+      lines.push(line.join(""));
+    }
+    content = lines.join("\n");
+  }
 
-	// Replace #f00 -> red
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR, "$1red$3");
+  // replace multiple semi-colons in a row by a single one
+  // see SF bug #1980989
+  content = content.replace(REGEXP_REPLACE_SEMI_COLUMNS, ";");
 
-	// Replace other short color keywords
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT1, "$1navy$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT2, "$1gray$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT3, "$1olive$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT4, "$1purple$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT5, "$1silver$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT6, "$1teal$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT7, "$1orange$3");
-	content = content.replace(REGEXP_REPLACE_HASH_COLOR_SHORT8, "$1maroon$3");
+  // trim the final string (for any leading or trailing white spaces)
+  content = content.replace(REGEXP_TRIM, "");
+  if (preservedTokens.length > 1000) {
+    return originalContent;
+  }
 
-	// border: none -> border:0
-	pattern = REGEXP_REPLACE_BORDER_ZERO;
-	content = content.replace(pattern, (_, f1, f2) => f1.toLowerCase() + ":0" + f2);
+  // restore preserved tokens
+  for (let i = preservedTokens.length - 1; i >= 0; i--) {
+    content = content.replace(___PRESERVED_TOKEN_ + i + "___", preservedTokens[i], "g");
+  }
 
-	// shorter opacity IE filter
-	content = content.replace(REGEXP_REPLACE_IE_OPACITY, "alpha(opacity=");
+  // restore preserved newlines
+  content = content.replace(REGEXP_PRESERVED_NEWLINE, "\n");
 
-	// Find a fraction that is used for Opera's -o-device-pixel-ratio query
-	// Add token to add the '\' back in later
-	content = content.replace(REGEXP_REPLACE_QUERY_FRACTION, "($1:$2___QUERY_FRACTION___$3)");
-
-	// remove empty rules.
-	// content = content.replace(REGEXP_EMPTY_RULES, "");
-
-	// Add '\' back to fix Opera -o-device-pixel-ratio query
-	content = content.replace(REGEXP_QUERY_FRACTION, "/");
-
-	// some source control tools don't like it when files containing lines longer
-	// than, say 8000 characters, are checked in. The linebreak option is used in
-	// that case to split long lines after a specific column.
-	if (options.maxLineLen > 0) {
-		const lines = [];
-		let line = [];
-		for (let i = 0, len = content.length; i < len; i += 1) {
-			const ch = content.charAt(i);
-			line.push(ch);
-			if (ch === "}" && line.length > options.maxLineLen) {
-				lines.push(line.join(""));
-				line = [];
-			}
-		}
-		if (line.length) {
-			lines.push(line.join(""));
-		}
-
-		content = lines.join("\n");
-	}
-
-	// replace multiple semi-colons in a row by a single one
-	// see SF bug #1980989
-	content = content.replace(REGEXP_REPLACE_SEMI_COLUMNS, ";");
-
-	// trim the final string (for any leading or trailing white spaces)
-	content = content.replace(REGEXP_TRIM, "");
-
-	if (preservedTokens.length > 1000) {
-		return originalContent;
-	}
-
-	// restore preserved tokens
-	for (let i = preservedTokens.length - 1; i >= 0; i--) {
-		content = content.replace(___PRESERVED_TOKEN_ + i + "___", preservedTokens[i], "g");
-	}
-
-	// restore preserved newlines
-	content = content.replace(REGEXP_PRESERVED_NEWLINE, "\n");
-
-	// return
-	return content;
+  // return
+  return content;
 }
-
-export {
-	defaultOptions,
-	processString
-};

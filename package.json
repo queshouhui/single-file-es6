@@ -1,18 +1,18 @@
 {
-  "name": "single-file-core",
-  "version": "1.5.36",
-  "description": "SingleFile Core",
-  "author": "Gildas Lormeau",
+  "name": "single-file-es6",
+  "version": "0.0.1",
+  "description": "SingleFile Core for ES6, fork from https://github.com/gildas-lormeau/single-file-core",
+  "author": "Ravin Que",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gildas-lormeau/single-file-core.git"
+    "url": "git+https://github.com/queshouhui/single-file-es6.git"
   },
   "bugs": {
-    "url": "https://github.com/gildas-lormeau/single-file-core/issues"
+    "url": "https://github.com/queshouhui/single-file-es6/issues"
   },
-  "homepage": "https://github.com/gildas-lormeau/single-file-core#readme"
+  "homepage": "https://github.com/queshouhui/single-file-es6#readme"
 }

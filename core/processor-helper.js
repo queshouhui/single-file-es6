@@ -1,3 +1,17 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+Object.defineProperty(exports, "cssTree", {
+  enumerable: true,
+  get: function () {
+    return _processorHelperInline.cssTree;
+  }
+});
+exports.getProcessorHelperClass = getProcessorHelperClass;
+var _processorHelperInline = require("./lib/processor-helper-inline.js");
+var _processorHelper = require("./lib/processor-helper.js");
 /*
  * Copyright 2010-2022 Gildas Lormeau
  * contact : gildas.lormeau <at> gmail.com
@@ -21,14 +35,6 @@
  *   Source.
  */
 
-import { getProcessorHelperClass as getHelperInlineClass, cssTree } from "./lib/processor-helper-inline.js";
-import { getProcessorHelperClass as getHelperClass } from "./lib/processor-helper.js";
-
-export {
-	getProcessorHelperClass,
-	cssTree
-};
-
 function getProcessorHelperClass(options, utilInstance) {
-	return options.compressContent ? getHelperClass(utilInstance) : getHelperInlineClass(utilInstance);
+  return options.compressContent ? (0, _processorHelper.getProcessorHelperClass)(utilInstance) : (0, _processorHelperInline.getProcessorHelperClass)(utilInstance);
 }

@@ -1,42 +1,24 @@
-/*
- * Copyright 2010-2022 Gildas Lormeau
- * contact : gildas.lormeau <at> gmail.com
- * 
- * This file is part of SingleFile.
- *
- *   The code in this file is free software: you can redistribute it and/or 
- *   modify it under the terms of the GNU Affero General Public License 
- *   (GNU AGPL) as published by the Free Software Foundation, either version 3
- *   of the License, or (at your option) any later version.
- * 
- *   The code in this file is distributed in the hope that it will be useful, 
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero 
- *   General Public License for more details.
- *
- *   As additional permission under GNU AGPL version 3 section 7, you may 
- *   distribute UNMODIFIED VERSIONS OF THIS file without the copy of the GNU 
- *   AGPL normally required by section 4, provided you include this license 
- *   notice and a URL through which recipients can access the Corresponding 
- *   Source.
- */
+"use strict";
 
-import * as fontsMinifier from "./css-fonts-minifier.js";
-import * as matchedRules from "./css-matched-rules.js";
-import * as mediasAltMinifier from "./css-medias-alt-minifier.js";
-import * as cssRulesMinifier from "./css-rules-minifier.js";
-import * as imagesAltMinifier from "./html-images-alt-minifier.js";
-import * as htmlMinifier from "./html-minifier.js";
-import * as serializer from "./html-serializer.js";
-import * as templateFormatter from "./template-formatter.js";
-
-export {
-	fontsMinifier,
-	matchedRules,
-	mediasAltMinifier,
-	cssRulesMinifier,
-	imagesAltMinifier,
-	htmlMinifier,
-	serializer,
-	templateFormatter
-};
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.templateFormatter = exports.serializer = exports.mediasAltMinifier = exports.matchedRules = exports.imagesAltMinifier = exports.htmlMinifier = exports.fontsMinifier = exports.cssRulesMinifier = void 0;
+var fontsMinifier = _interopRequireWildcard(require("./css-fonts-minifier.js"));
+exports.fontsMinifier = fontsMinifier;
+var matchedRules = _interopRequireWildcard(require("./css-matched-rules.js"));
+exports.matchedRules = matchedRules;
+var mediasAltMinifier = _interopRequireWildcard(require("./css-medias-alt-minifier.js"));
+exports.mediasAltMinifier = mediasAltMinifier;
+var cssRulesMinifier = _interopRequireWildcard(require("./css-rules-minifier.js"));
+exports.cssRulesMinifier = cssRulesMinifier;
+var imagesAltMinifier = _interopRequireWildcard(require("./html-images-alt-minifier.js"));
+exports.imagesAltMinifier = imagesAltMinifier;
+var htmlMinifier = _interopRequireWildcard(require("./html-minifier.js"));
+exports.htmlMinifier = htmlMinifier;
+var serializer = _interopRequireWildcard(require("./html-serializer.js"));
+exports.serializer = serializer;
+var templateFormatter = _interopRequireWildcard(require("./template-formatter.js"));
+exports.templateFormatter = templateFormatter;
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }

@@ -1,3 +1,6 @@
+"use strict";
+
+var _infobar = require("./core/infobar.js");
 /*
  * Copyright 2010-2022 Gildas Lormeau
  * contact : gildas.lormeau <at> gmail.com
@@ -23,48 +26,49 @@
 
 /* global globalThis, window, document */
 
-import { appendInfobar, refreshInfobarInfo, extractInfobarData } from "./core/infobar.js";
-
 (globalThis => {
-
-	const browser = globalThis.browser;
-	const MutationObserver = globalThis.MutationObserver;
-	init();
-
-	function init() {
-		if (globalThis.window == globalThis.top) {
-			if (document.readyState == "loading") {
-				document.addEventListener("DOMContentLoaded", displayIcon, false);
-			} else {
-				displayIcon();
-			}
-			document.addEventListener("single-file-display-infobar", displayIcon, false);
-			new MutationObserver(init).observe(document, { childList: true });
-		}
-		if (globalThis.singlefile) {
-			globalThis.singlefile.infobar = {
-				displayIcon
-			};
-		}
-	}
-
-	async function displayIcon() {
-		let options = { displayInfobar: true };
-		const infoData = extractInfobarData(document);
-		if (infoData && infoData.saveUrl) {
-			if (browser && browser.runtime && browser.runtime.sendMessage) {
-				try {
-					options = await browser.runtime.sendMessage({ method: "tabs.getOptions", url: infoData.saveUrl });
-				} catch (error) {
-					// ignored
-				}
-			}
-			if (options.displayInfobar) {
-				infoData.openInfobar = options.openInfobar;
-				appendInfobar(document, infoData, true);
-				refreshInfobarInfo(document, infoData);
-			}
-		}
-	}
-
+  const browser = globalThis.browser;
+  const MutationObserver = globalThis.MutationObserver;
+  init();
+  function init() {
+    if (globalThis.window == globalThis.top) {
+      if (document.readyState == "loading") {
+        document.addEventListener("DOMContentLoaded", displayIcon, false);
+      } else {
+        displayIcon();
+      }
+      document.addEventListener("single-file-display-infobar", displayIcon, false);
+      new MutationObserver(init).observe(document, {
+        childList: true
+      });
+    }
+    if (globalThis.singlefile) {
+      globalThis.singlefile.infobar = {
+        displayIcon
+      };
+    }
+  }
+  async function displayIcon() {
+    let options = {
+      displayInfobar: true
+    };
+    const infoData = (0, _infobar.extractInfobarData)(document);
+    if (infoData && infoData.saveUrl) {
+      if (browser && browser.runtime && browser.runtime.sendMessage) {
+        try {
+          options = await browser.runtime.sendMessage({
+            method: "tabs.getOptions",
+            url: infoData.saveUrl
+          });
+        } catch (error) {
+          // ignored
+        }
+      }
+      if (options.displayInfobar) {
+        infoData.openInfobar = options.openInfobar;
+        (0, _infobar.appendInfobar)(document, infoData, true);
+        (0, _infobar.refreshInfobarInfo)(document, infoData);
+      }
+    }
+  }
 })(typeof globalThis == "object" ? globalThis : window);

@@ -1,3 +1,14 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.INFOBAR_TAGNAME = void 0;
+exports.appendInfobar = appendInfobar;
+exports.displayIcon = displayIcon;
+exports.extractInfobarData = extractInfobarData;
+exports.refreshInfobarInfo = refreshInfobarInfo;
+var _constants = require("./constants.js");
 /*
  * Copyright 2010-2022 Gildas Lormeau
  * contact : gildas.lormeau <at> gmail.com
@@ -23,11 +34,7 @@
 
 /* global getComputedStyle, XPathResult, Node */
 
-import {
-	SINGLE_FILE_SIGNATURE,
-} from "./constants.js";
-
-const INFOBAR_TAGNAME = "single-file-infobar";
+const INFOBAR_TAGNAME = exports.INFOBAR_TAGNAME = "single-file-infobar";
 const INFOBAR_STYLES = `
 .infobar,
 .infobar .infobar-icon,
@@ -164,141 +171,139 @@ const INFOBAR_STYLES = `
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAABhmlDQ1BJQ0MgcHJvZmlsZQAAKJF9kj1Iw0AYht+mSkUrDnYQcchQnSyIijqWKhbBQmkrtOpgcukfNGlIUlwcBdeCgz+LVQcXZ10dXAVB8AfEydFJ0UVK/C4ptIjx4LiH9+59+e67A4RGhalm1wSgapaRisfEbG5VDLyiDwEAvZiVmKkn0osZeI6ve/j4ehfhWd7n/hz9St5kgE8kjjLdsIg3iGc2LZ3zPnGIlSSF+Jx43KACiR+5Lrv8xrnosMAzQ0YmNU8cIhaLHSx3MCsZKvE0cVhRNcoXsi4rnLc4q5Uaa9XJbxjMaytprtMcQRxLSCAJETJqKKMCCxFaNVJMpGg/5uEfdvxJcsnkKoORYwFVqJAcP/gb/O6tWZiadJOCMaD7xbY/RoHALtCs2/b3sW03TwD/M3Cltf3VBjD3SXq9rYWPgIFt4OK6rcl7wOUOMPSkS4bkSH6aQqEAvJ/RM+WAwVv6EGtu31r7OH0AMtSr5Rvg4BAYK1L2use9ezr79u+ZVv9+AFlNcp0UUpiqAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAB3RJTUUH5AsHAB8VC4EQ6QAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAAJUExURQAAAICHi4qKioTuJAkAAAABdFJOUwBA5thmAAAAAWJLR0QCZgt8ZAAAAJtJREFUOI3NkrsBgCAMRLFwBPdxBArcfxXFkO8rbKWAAJfHJ9faf9vuYX/749T5NmShm3bEwbe2SxeuM4+2oxDL1cDoKtVUjRy+tH78Cv2CS+wIiQNC1AEhk4AQeUTMWUJMfUJMSEJMSEY8kIx4IONroaYAimNxsXp1PA7PxwfVL8QnowwoVC0lig07wDDVUjAdbAnjwtow/z/bDW7eI4M2KruJAAAAAElFTkSuQmCC);
 }
 `;
-
-export { displayIcon, appendInfobar, refreshInfobarInfo, extractInfobarData, INFOBAR_TAGNAME };
-
 function appendInfobar(doc, options, useShadowRoot) {
-	if (!doc.querySelector(INFOBAR_TAGNAME)) {
-		let infoData;
-		if (options.infobarContent) {
-			infoData = options.infobarContent.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
-		} else if (options.saveDate) {
-			infoData = options.saveDate;
-		}
-		infoData = infoData || "No info";
-		const parentElement = doc.body.tagName == "BODY" ? doc.body : doc.documentElement;
-		const infobarElement = createElement(doc, INFOBAR_TAGNAME, parentElement);
-		let infobarContainer;
-		if (useShadowRoot) {
-			infobarContainer = infobarElement.attachShadow({ mode: "open" });
-		} else {
-			const shadowRootTemplate = doc.createElement("template");
-			shadowRootTemplate.setAttribute("shadowrootmode", "open");
-			infobarElement.appendChild(shadowRootTemplate);
-			infobarContainer = shadowRootTemplate;
-		}
-		const shadowRootContent = doc.createElement("div");
-		const styleElement = doc.createElement("style");
-		styleElement.textContent = INFOBAR_STYLES
-			.replace(/ {2}/g, "")
-			.replace(/\n/g, "")
-			.replace(/: /g, ":")
-			.replace(/, /g, ",");
-		shadowRootContent.appendChild(styleElement);
-		const infobarContent = doc.createElement("form");
-		infobarContent.classList.add("infobar");
-		if (options.openInfobar) {
-			infobarContent.classList.add("infobar-focus");
-		}
-		shadowRootContent.appendChild(infobarContent);
-		const iconElement = doc.createElement("span");
-		iconElement.tabIndex = -1;
-		iconElement.classList.add("infobar-icon");
-		infobarContent.appendChild(iconElement);
-		const contentElement = doc.createElement("span");
-		contentElement.tabIndex = -1;
-		contentElement.classList.add("infobar-content");
-		const closeButtonElement = doc.createElement("input");
-		closeButtonElement.type = "checkbox";
-		closeButtonElement.required = true;
-		closeButtonElement.classList.add("infobar-close-icon");
-		closeButtonElement.title = "Close";
-		contentElement.appendChild(closeButtonElement);
-		const textElement = doc.createElement("span");
-		textElement.textContent = infoData;
-		contentElement.appendChild(textElement);
-		const linkElement = doc.createElement("a");
-		linkElement.classList.add("infobar-link-icon");
-		linkElement.target = "_blank";
-		linkElement.rel = "noopener noreferrer";
-		linkElement.title = "Open source URL: " + options.saveUrl;
-		linkElement.href = options.saveUrl;
-		contentElement.appendChild(linkElement);
-		infobarContent.appendChild(contentElement);
-		if (useShadowRoot) {
-			infobarContainer.appendChild(shadowRootContent);
-		} else {
-			const scriptElement = doc.createElement("script");
-			let scriptContent = refreshInfobarInfo.toString();
-			scriptContent += ";const SINGLE_FILE_SIGNATURE = " + JSON.stringify(SINGLE_FILE_SIGNATURE) + ";";
-			scriptContent += extractInfobarData.toString();
-			scriptContent += "(" + initInfobar.toString() + ")(document)";
-			scriptElement.textContent = scriptContent;
-			shadowRootContent.appendChild(scriptElement);
-			infobarContainer.innerHTML = shadowRootContent.outerHTML;
-		}
-	}
+  if (!doc.querySelector(INFOBAR_TAGNAME)) {
+    let infoData;
+    if (options.infobarContent) {
+      infoData = options.infobarContent.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    } else if (options.saveDate) {
+      infoData = options.saveDate;
+    }
+    infoData = infoData || "No info";
+    const parentElement = doc.body.tagName == "BODY" ? doc.body : doc.documentElement;
+    const infobarElement = createElement(doc, INFOBAR_TAGNAME, parentElement);
+    let infobarContainer;
+    if (useShadowRoot) {
+      infobarContainer = infobarElement.attachShadow({
+        mode: "open"
+      });
+    } else {
+      const shadowRootTemplate = doc.createElement("template");
+      shadowRootTemplate.setAttribute("shadowrootmode", "open");
+      infobarElement.appendChild(shadowRootTemplate);
+      infobarContainer = shadowRootTemplate;
+    }
+    const shadowRootContent = doc.createElement("div");
+    const styleElement = doc.createElement("style");
+    styleElement.textContent = INFOBAR_STYLES.replace(/ {2}/g, "").replace(/\n/g, "").replace(/: /g, ":").replace(/, /g, ",");
+    shadowRootContent.appendChild(styleElement);
+    const infobarContent = doc.createElement("form");
+    infobarContent.classList.add("infobar");
+    if (options.openInfobar) {
+      infobarContent.classList.add("infobar-focus");
+    }
+    shadowRootContent.appendChild(infobarContent);
+    const iconElement = doc.createElement("span");
+    iconElement.tabIndex = -1;
+    iconElement.classList.add("infobar-icon");
+    infobarContent.appendChild(iconElement);
+    const contentElement = doc.createElement("span");
+    contentElement.tabIndex = -1;
+    contentElement.classList.add("infobar-content");
+    const closeButtonElement = doc.createElement("input");
+    closeButtonElement.type = "checkbox";
+    closeButtonElement.required = true;
+    closeButtonElement.classList.add("infobar-close-icon");
+    closeButtonElement.title = "Close";
+    contentElement.appendChild(closeButtonElement);
+    const textElement = doc.createElement("span");
+    textElement.textContent = infoData;
+    contentElement.appendChild(textElement);
+    const linkElement = doc.createElement("a");
+    linkElement.classList.add("infobar-link-icon");
+    linkElement.target = "_blank";
+    linkElement.rel = "noopener noreferrer";
+    linkElement.title = "Open source URL: " + options.saveUrl;
+    linkElement.href = options.saveUrl;
+    contentElement.appendChild(linkElement);
+    infobarContent.appendChild(contentElement);
+    if (useShadowRoot) {
+      infobarContainer.appendChild(shadowRootContent);
+    } else {
+      const scriptElement = doc.createElement("script");
+      let scriptContent = refreshInfobarInfo.toString();
+      scriptContent += ";const SINGLE_FILE_SIGNATURE = " + JSON.stringify(_constants.SINGLE_FILE_SIGNATURE) + ";";
+      scriptContent += extractInfobarData.toString();
+      scriptContent += "(" + initInfobar.toString() + ")(document)";
+      scriptElement.textContent = scriptContent;
+      shadowRootContent.appendChild(scriptElement);
+      infobarContainer.innerHTML = shadowRootContent.outerHTML;
+    }
+  }
 }
-
 function extractInfobarData(doc) {
-	const result = doc.evaluate("//comment()", doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-	let singleFileComment = result && result.singleNodeValue;
-	if (singleFileComment && singleFileComment.nodeType == Node.COMMENT_NODE && singleFileComment.textContent.includes(SINGLE_FILE_SIGNATURE)) {
-		const info = singleFileComment.textContent.split("\n");
-		const [, , urlData, ...optionalData] = info;
-		const urlMatch = urlData.match(/^ url: (.*) ?$/);
-		const saveUrl = urlMatch && urlMatch[1];
-		if (saveUrl) {
-			let infobarContent, saveDate;
-			if (optionalData.length) {
-				saveDate = optionalData[0].split("saved date: ")[1];
-				if (saveDate) {
-					optionalData.shift();
-				}
-				if (optionalData.length > 1) {
-					let content = optionalData[0].split("info: ")[1].trim();
-					for (let indexLine = 1; indexLine < optionalData.length - 1; indexLine++) {
-						content += "\n" + optionalData[indexLine].trim();
-					}
-					infobarContent = content.trim();
-				}
-			}
-			return { saveUrl, infobarContent, saveDate };
-		}
-	}
+  const result = doc.evaluate("//comment()", doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+  let singleFileComment = result && result.singleNodeValue;
+  if (singleFileComment && singleFileComment.nodeType == Node.COMMENT_NODE && singleFileComment.textContent.includes(_constants.SINGLE_FILE_SIGNATURE)) {
+    const info = singleFileComment.textContent.split("\n");
+    const [,, urlData, ...optionalData] = info;
+    const urlMatch = urlData.match(/^ url: (.*) ?$/);
+    const saveUrl = urlMatch && urlMatch[1];
+    if (saveUrl) {
+      let infobarContent, saveDate;
+      if (optionalData.length) {
+        saveDate = optionalData[0].split("saved date: ")[1];
+        if (saveDate) {
+          optionalData.shift();
+        }
+        if (optionalData.length > 1) {
+          let content = optionalData[0].split("info: ")[1].trim();
+          for (let indexLine = 1; indexLine < optionalData.length - 1; indexLine++) {
+            content += "\n" + optionalData[indexLine].trim();
+          }
+          infobarContent = content.trim();
+        }
+      }
+      return {
+        saveUrl,
+        infobarContent,
+        saveDate
+      };
+    }
+  }
 }
-
-function refreshInfobarInfo(doc, { saveUrl, infobarContent, saveDate }) {
-	if (saveUrl) {
-		const infobarElement = doc.querySelector("single-file-infobar");
-		const shadowRootFragment = infobarElement.shadowRoot;
-		const infobarContentElement = shadowRootFragment.querySelector(".infobar-content span");
-		infobarContentElement.textContent = infobarContent || saveDate;
-		const linkElement = shadowRootFragment.querySelector(".infobar-content .infobar-link-icon");
-		linkElement.href = saveUrl;
-		linkElement.title = "Open source URL: " + saveUrl;
-	}
+function refreshInfobarInfo(doc, {
+  saveUrl,
+  infobarContent,
+  saveDate
+}) {
+  if (saveUrl) {
+    const infobarElement = doc.querySelector("single-file-infobar");
+    const shadowRootFragment = infobarElement.shadowRoot;
+    const infobarContentElement = shadowRootFragment.querySelector(".infobar-content span");
+    infobarContentElement.textContent = infobarContent || saveDate;
+    const linkElement = shadowRootFragment.querySelector(".infobar-content .infobar-link-icon");
+    linkElement.href = saveUrl;
+    linkElement.title = "Open source URL: " + saveUrl;
+  }
 }
-
 function displayIcon(doc, useShadowRoot, options = {}) {
-	const infoData = extractInfobarData(doc);
-	if (infoData.saveUrl) {
-		infoData.openInfobar = options.openInfobar;
-		appendInfobar(doc, infoData, useShadowRoot);
-		refreshInfobarInfo(doc, infoData);
-	}
+  const infoData = extractInfobarData(doc);
+  if (infoData.saveUrl) {
+    infoData.openInfobar = options.openInfobar;
+    appendInfobar(doc, infoData, useShadowRoot);
+    refreshInfobarInfo(doc, infoData);
+  }
 }
-
 function initInfobar(doc) {
-	const infoData = extractInfobarData(doc);
-	if (infoData && infoData.saveUrl) {
-		refreshInfobarInfo(doc, infoData);
-	}
+  const infoData = extractInfobarData(doc);
+  if (infoData && infoData.saveUrl) {
+    refreshInfobarInfo(doc, infoData);
+  }
 }
-
 function createElement(doc, tagName, parentElement) {
-	const element = doc.createElement(tagName);
-	parentElement.appendChild(element);
-	Array.from(getComputedStyle(element)).forEach(property => element.style.setProperty(property, "initial", "important"));
-	return element;
+  const element = doc.createElement(tagName);
+  parentElement.appendChild(element);
+  Array.from(getComputedStyle(element)).forEach(property => element.style.setProperty(property, "initial", "important"));
+  return element;
 }
