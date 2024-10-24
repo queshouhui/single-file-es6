@@ -5290,7 +5290,7 @@ function getLength(...arrayLikes) {
 
 let baseURL;
 try {
-  baseURL = import.meta.url;
+  baseURL = 'file://' + __filename;
 } catch (_error) {
   // ignored
 }
